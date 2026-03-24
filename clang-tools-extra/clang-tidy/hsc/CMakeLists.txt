@@ -7,6 +7,8 @@ add_clang_library(clangTidyHSCModule STATIC
   HSCTidyModule.cpp
   UnusedReturnValueCheck.cpp
   UnusedVariableCheck.cpp
+  UnusedTypeCheck.cpp
+  UnusedFunctionCheck.cpp
 
   LINK_LIBS
   clangTidy

@@ -109,10 +109,11 @@ void writeLog(const std::string& text) {
 ```
 ----
 
-Rule HSCAA.2.2 --- A named function parameter shall be used at least once
-Description: An unused named parameter suggests the function's implementation may not fulfill its interface contract. When a parameter must exist for signature compatibility (e.g., overrides, callbacks) but is not required, it should remain unnamed or be marked [[maybe_unused]].
+## Rule HSCAA.2.2 --- A named function parameter shall be used at least once
+Description: An unused named parameter suggests the function's implementation may not fulfill its interface contract. When a parameter must exist for signature compatibility (e.g., overrides, callbacks) but is not required, it should remain unnamed or be marked `[[maybe_unused]]`.
 
 ### Non-Compliant --- unused parameter in override:
+```cpp
 class Parent {
 public:
     virtual int calculate(int x, int y);
@@ -124,59 +125,86 @@ public:
         return x;
     }
 };
+```
+
 ### Compliant --- unnamed parameter:
+```cpp
 class Child2 : public Parent {
 public:
     int calculate(int x, int) override {     // Compliant — unnamed parameter
         return x;
     }
 };
+```
 
 ### Non-Compliant --- unused parameter in free function:
+```cpp
 void operation(int first, int second) {   // Non-compliant — 'first' is unused
     (void)second;
 }
+```
 
 ### Non-Compliant --- callback with unused context:
+```cpp
 using Handler = void(*)(int code, void* ctx);
 
 void onEvent(int code, void* ctx) {   // Non-compliant — 'ctx' unused
     record(code);
 }
+```
+
 ### Compliant --- [[maybe_unused]] for conditionally-used parameter:
+
+```cpp
 template<bool verbose>
 void output(int num, [[maybe_unused]] const char* tag) {
     if constexpr (verbose) {
         std::cout << tag << ": " << num << "\n";
     }
 }
+```
+
 ### Compliant --- lambda with unnamed parameter:
+
+```cpp
 auto skipFirst = [](int, double val) {   // Compliant — first param unnamed
     return val * 2.0;
 };
+```
 
 
-Rule HSCAA.2.3 --- Types with limited visibility should be used at least once
+## Rule HSCAA.2.3 --- Types with limited visibility should be used at least once
 Description: A type declared in block scope or in an unnamed namespace that is never referenced outside its own definition is likely residual from refactoring or an incomplete implementation.
 
 ### Non-Compliant --- unused type alias:
+```cpp
 int compute() {
     using Alias = int;     // Non-compliant — Alias is never used
     return 67;
 }
-### Compliant --- [[maybe_unused]]:
+```
+
+### Compliant --- `[[maybe_unused]]`:
+
+```cpp
 int compute() {
     using Alias [[maybe_unused]] = int;   // Compliant by exception
     return 67;
 }
+```
 
 ### Non-Compliant --- unused struct in anonymous namespace:
+
+```cpp
 namespace {
     struct Helper { Helper create(); };      // Non-compliant — Helper not used outside its definition
     Helper Helper::create() { return *this; }  // Not a use of Helper per rule
 }
+```
 
 ### Non-Compliant --- unused helper struct in block scope:
+
+```cpp
 void execute() {
     struct Settings {              // Non-compliant — Settings is never instantiated
         int delay;
@@ -185,20 +213,27 @@ void execute() {
     // Developer forgot to create a Settings object and use it
     performTask(30, 3);              // Hardcoded values instead
 }
+```
 
 ### Compliant --- type used for local variable:
+
+```cpp
 void execute() {
     struct Settings { int delay; int attempts; };
     Settings opts{30, 3};          // Compliant — Settings is used
     performTask(opts.delay, opts.attempts);
 }
+```
+
 ### Compliant --- closure type is always considered used:
+
+```cpp
 namespace {
     void run() {
         [](auto) {};            // Compliant — closure type always used
     }
 }
-
+```
 
 Rule HSCAA.2.4 --- Functions with limited visibility should be used at least once
 Description: Functions with limited visibility (static, private non-virtual, or in anonymous namespaces) are not part of an extensible API. If present but unused, they may indicate dead code or a design flaw.

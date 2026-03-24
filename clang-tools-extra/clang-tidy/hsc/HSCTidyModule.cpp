@@ -8,7 +8,9 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "UnusedFunctionCheck.h"
 #include "UnusedReturnValueCheck.h"
+#include "UnusedTypeCheck.h"
 #include "UnusedVariableCheck.h"
 
 namespace clang::tidy {
@@ -21,6 +23,8 @@ public:
     CheckFactories.registerCheck<UnusedVariableCheck>("hsc-unused-variable");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "hsc-unused-return-value");
+    CheckFactories.registerCheck<UnusedTypeCheck>("hsc-unused-type");
+    CheckFactories.registerCheck<UnusedFunctionCheck>("hsc-unused-function");
   }
 };
 
