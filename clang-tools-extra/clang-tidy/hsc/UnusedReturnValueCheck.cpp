@@ -17,7 +17,7 @@ namespace clang::tidy::hsc {
 
 namespace {
 
-// HSCAA.1.2 exempts overloaded operators used with operator syntax, except
+// Overloaded operators used with operator syntax are exempt, except
 // function-call syntax (operator()), which must still be checked.
 AST_MATCHER(CXXOperatorCallExpr, isExemptOperatorSyntax) {
   return Node.getOperator() != OO_Call;

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyHSCModule STATIC
   HSCTidyModule.cpp
   UnusedReturnValueCheck.cpp
+  UnusedVariableCheck.cpp
 
   LINK_LIBS
   clangTidy

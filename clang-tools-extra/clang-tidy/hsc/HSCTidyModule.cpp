@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "UnusedReturnValueCheck.h"
+#include "UnusedVariableCheck.h"
 
 namespace clang::tidy {
 namespace hsc {
@@ -17,6 +18,7 @@ namespace {
 class HSCModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<UnusedVariableCheck>("hsc-unused-variable");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "hsc-unused-return-value");
   }
