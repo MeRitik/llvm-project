@@ -8,6 +8,7 @@
 
 #include "UnusedVariableCheck.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -41,7 +42,11 @@ AST_MATCHER(QualType, hasUserProvidedCtorOrDtor) {
 
 AST_MATCHER(VarDecl, isLimitedVisibility) {
   return Node.isLocalVarDecl() ||
-         (Node.hasGlobalStorage() && Node.hasInternalLinkage());
+         (Node.hasGlobalStorage() && Node.getStorageClass() == SC_Static);
+}
+
+AST_MATCHER(VarDecl, isUnused) {
+  return !Node.isReferenced();
 }
 
 } // namespace
@@ -49,7 +54,7 @@ AST_MATCHER(VarDecl, isLimitedVisibility) {
 void UnusedVariableCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(varDecl(isDefinition(), isLimitedVisibility(),
                              unless(isExceptionVariable()),
-                             unless(isReferenced()),
+                             isUnused(),
                              unless(hasAttr(attr::Unused)),
                              unless(hasType(hasUserProvidedCtorOrDtor())))
                          .bind("unused-var"),
