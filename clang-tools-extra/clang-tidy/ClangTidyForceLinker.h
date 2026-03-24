@@ -80,6 +80,10 @@ extern volatile int HICPPModuleAnchorSource;
 [[maybe_unused]] static int HICPPModuleAnchorDestination =
     HICPPModuleAnchorSource;
 
+// This anchor is used to force the linker to link the HSCModule.
+extern volatile int HSCModuleAnchorSource;
+[[maybe_unused]] static int HSCModuleAnchorDestination = HSCModuleAnchorSource;
+
 // This anchor is used to force the linker to link the LinuxKernelModule.
 extern volatile int LinuxKernelModuleAnchorSource;
 [[maybe_unused]] static int LinuxKernelModuleAnchorDestination =

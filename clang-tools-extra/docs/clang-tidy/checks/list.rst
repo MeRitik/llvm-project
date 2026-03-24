@@ -20,6 +20,7 @@ Clang-Tidy Checks
    fuchsia/*
    google/*
    hicpp/*
+   hsc/*
    linuxkernel/*
    llvm/*
    llvmlibc/*
@@ -244,6 +245,7 @@ Clang-Tidy Checks
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
+   :doc:`hsc-unused-return-value <hsc/unused-return-value>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
