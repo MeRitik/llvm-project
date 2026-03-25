@@ -8,6 +8,11 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "ConcealedBaseFunctionCheck.h"
+#include "DependentBaseLookupCheck.h"
+#include "EscapingLocalAddressCheck.h"
+#include "ExplicitBaseInitCheck.h"
+#include "RefQualifiedThisReturnCheck.h"
 #include "UnusedFunctionCheck.h"
 #include "UnusedReturnValueCheck.h"
 #include "UnusedTypeCheck.h"
@@ -25,6 +30,16 @@ public:
         "hsc-unused-return-value");
     CheckFactories.registerCheck<UnusedTypeCheck>("hsc-unused-type");
     CheckFactories.registerCheck<UnusedFunctionCheck>("hsc-unused-function");
+    CheckFactories.registerCheck<ConcealedBaseFunctionCheck>(
+        "hsc-concealed-base-function");
+    CheckFactories.registerCheck<DependentBaseLookupCheck>(
+        "hsc-dependent-base-lookup");
+    CheckFactories.registerCheck<EscapingLocalAddressCheck>(
+        "hsc-escaping-local-address");
+    CheckFactories.registerCheck<RefQualifiedThisReturnCheck>(
+        "hsc-ref-qualified-this-return");
+    CheckFactories.registerCheck<ExplicitBaseInitCheck>(
+        "hsc-explicit-base-init");
   }
 };
 

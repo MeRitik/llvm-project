@@ -4,7 +4,12 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyHSCModule STATIC
+  ConcealedBaseFunctionCheck.cpp
+  DependentBaseLookupCheck.cpp
+  EscapingLocalAddressCheck.cpp
+  ExplicitBaseInitCheck.cpp
   HSCTidyModule.cpp
+  RefQualifiedThisReturnCheck.cpp
   UnusedReturnValueCheck.cpp
   UnusedVariableCheck.cpp
   UnusedTypeCheck.cpp

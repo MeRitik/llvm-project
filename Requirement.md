@@ -235,10 +235,11 @@ namespace {
 }
 ```
 
-Rule HSCAA.2.4 --- Functions with limited visibility should be used at least once
+## Rule HSCAA.2.4 --- Functions with limited visibility should be used at least once
 Description: Functions with limited visibility (static, private non-virtual, or in anonymous namespaces) are not part of an extensible API. If present but unused, they may indicate dead code or a design flaw.
 
 ### Non-Compliant --- unused private and static functions:
+```cpp
 struct Container {
     Container() { helper(); }
 private:
@@ -251,14 +252,19 @@ static void standalone() {}       // Non-compliant — never used
 namespace {
     void internal() {}          // Non-compliant — never used
 }
+```
+
 ### Compliant --- address taken:
+```cpp
 static void utility() {}       // Compliant — address taken below
 
 void (*getUtility())() {
     return &utility;
 }
+```
 
 ### Non-Compliant --- dead helper function after refactoring:
+```cpp
 namespace {
     // Was used before refactoring, now dead code
     double blend(double a, double b, double t) {   // Non-compliant
@@ -269,22 +275,28 @@ namespace {
 double transform(double x) {
     return x * 2.0;       // blend() is no longer called
 }
+```
 ### Compliant --- private virtual function (excluded from rule):
+```cpp
 class Notifier {
     virtual void onNotify(int id) = 0;   // Rule does not apply — virtual
 };
+```
 ### Compliant --- special member function (excluded from rule):
+```cpp
 struct Handle {
 private:
     Handle(const Handle&) = delete;          // Excluded — special member
     Handle& operator=(const Handle&) = delete;  // Excluded — special member
 };
+```
 
 
-Rule HSCAG.4.2 --- Derived classes shall not conceal functions inherited from their bases
+## Rule HSCAG.4.2 --- Derived classes shall not conceal functions inherited from their bases
 Description: When a derived class declares a function with the same name as a base class function, C++ name lookup stops at the derived class and does not consider the base class overloads. This "concealment" may cause calls to resolve to unexpected functions. The rule does not apply when the base is inherited privately, when the function is a virtual override, or when a using-declaration introduces the base function.
 
 ### Non-Compliant --- derived function conceals base:
+```cpp
 class Parent {
 public:
     void action(int i);
@@ -296,24 +308,32 @@ public:
     void action(float f);     // Non-compliant — conceals Parent::action(int)
     void action(char c);      // Non-compliant — conceals Parent::action(char), not an override
 };
+```
 ### Compliant --- using-declaration:
+```cpp
 class Child : public Parent {
 public:
     using Parent::action;       // Introduces Parent::action overload
     void action(float f);       // Compliant — Parent::action is not concealed
 };
+```
 ### Compliant --- virtual override:
+```
 class Child : public Parent {
 public:
     Child* action(char c) override;   // Compliant — overrides Parent::action
 };
+```
+
 ### Compliant --- private inheritance:
+```cpp
 class PrivateChild : private Parent {
 public:
     void action(float f);   // Compliant — Parent inherited privately
 };
-
+```
 ### Non-Compliant --- concealment in a real-world hierarchy:
+```cpp
 class Renderer {
 public:
     void render(int x, int y);
@@ -325,18 +345,24 @@ public:
     void render(double scale);   // Non-compliant — conceals both Renderer::render overloads
     // A call like sprite.render(10, 20) will fail to compile or resolve unexpectedly
 };
+```
+
 ### Compliant --- using-declaration preserves base overloads:
+
+```cpp
 class Sprite : public Renderer {
 public:
     using Renderer::render;          // Introduces Renderer::render overloads
     void render(double scale);       // Compliant
 };
+```
 
-
-Rule HSCAG.4.3 --- A name present in a dependent base shall not be resolved by unqualified lookup
+## Rule HSCAG.4.3 --- A name present in a dependent base shall not be resolved by unqualified lookup
 Description: In a template class with a dependent base, C++ does not search the base class during unqualified name lookup. An unqualified name resolves to a global or enclosing-namespace entity, even if an identically named entity exists in the base. This can silently invoke the wrong function or use the wrong type.
 
 ### Non-Compliant --- unqualified call resolves to global:
+
+```cpp
 typedef int32_t DataType;
 void helper();
 
@@ -355,7 +381,11 @@ struct Core {
     typedef T DataType;
     void helper();
 };
+```
+
 ### Compliant --- qualified name or this->:
+
+```cpp
 template<typename T>
 struct Module : Core<T> {
     void run() {
@@ -373,8 +403,11 @@ struct Module : Core<T> {
         DataType val = 0;              // Compliant — found via using-declaration
     }
 };
+```
 
 ### Non-Compliant --- real-world container adapter:
+
+```cpp
 using length_type = unsigned long;
 
 template<typename Storage>
@@ -384,7 +417,11 @@ public:
         return length_type{0};        //   ::length_type, not Storage::length_type
     }
 };
+```
+
 ### Compliant --- qualified access in container adapter:
+
+```cpp
 template<typename Storage>
 class Wrapper : public Storage {
 public:
@@ -392,12 +429,14 @@ public:
         return typename Storage::length_type{0};
     }
 };
+```
 
-
-Rule HSCAG.8.3 --- An assignment operator shall not assign the address of an automatic-storage object to an object with greater lifetime
+## Rule HSCAG.8.3 --- An assignment operator shall not assign the address of an automatic-storage object to an object with greater lifetime
 Description: If the address of a local variable is stored in a pointer that outlives the local (e.g., declared in an outer scope or with static storage duration), the pointer becomes dangling when the local is destroyed. This leads to undefined behaviour.
 
 ### Non-Compliant --- address of local escapes scope:
+
+```cpp
 void example1() {
     int8_t* ptr;
     {
@@ -409,7 +448,11 @@ void example1() {
     }
     // ptr is now dangling
 }
+```
+
 ### Compliant --- same scope:
+
+```cpp
 void example2() {
     int8_t* outer;
     {
@@ -442,11 +485,12 @@ void example() {
     int* ptr = &num;         // Compliant — same scope, same lifetime
     consume(ptr);
 }
+```
 
-
-Rule HSCAG.8.4 --- Member functions returning references to their object should be ref-qualified appropriately
+## Rule HSCAG.8.4 --- Member functions returning references to their object should be ref-qualified appropriately
 Description: A member function that returns a reference or pointer to *this or one of its subobjects can produce a dangling reference if called on a temporary. Ref-qualifying such functions with & prevents them from being called on rvalues, eliminating immediate dangling.
 
+```cpp
 ### Non-Compliant --- not ref-qualified:
 struct Record {
     int32_t field;
@@ -466,7 +510,8 @@ struct Record {
     int32_t const& getField() const& { return field; }  // Compliant — const& with
     int32_t getField() && { return field; }              //   rvalue overload
 };
-Rule does not apply --- returning a reference member:
+
+### Rule does not apply --- returning a reference member:
 struct Record {
     int32_t& ref;
     int32_t& getRef() { return ref; }   // Rule does not apply — ref is a reference, not a subobject
@@ -499,18 +544,22 @@ public:
         params_ = p; return *this;
     }
 };
+
 ### Compliant --- returning pointer to this with const& + && deleted:
 class Component {
 public:
     const Component* instance() const& { return this; }   // Compliant
     void instance() const&& = delete;                      // Prevents call on temporaries
 };
+```
 
 
-Rule HSCAP.1.2 --- All constructors of a class should explicitly initialise all virtual and immediate base classes
+## Rule HSCAP.1.2 --- All constructors of a class should explicitly initialise all virtual and immediate base classes
 Description: When a constructor does not explicitly initialise a base class, the compiler silently invokes the base's default constructor. In hierarchies with virtual inheritance, this can lead to confusion about which constructor runs and with what arguments. Explicit initialisation makes the developer's intent unambiguous.
 
 ### Non-Compliant --- missing explicit base init:
+
+```cpp
 class Root {
 public:
     Root() {}
@@ -534,12 +583,19 @@ public:
     Leaf() {}                     // Non-compliant — Root, BranchA, BranchB not explicitly initialised
     // Root's default ctor runs (val_ == 0), despite BranchA and BranchB specifying 21 and 42
 };
+```
+
 ### Compliant --- explicit initialisation:
+
+```cpp
 class Leaf : public BranchA, public BranchB {
 public:
     Leaf() : Root{}, BranchA{}, BranchB{} {}  // Compliant — all bases explicit, Root::val_ == 0
 };
+```
 ### Compliant --- delegating constructor:
+
+```cpp
 class Extended : public Core {
 public:
     Extended(int32_t num) : Core{num} {}   // Compliant — Core explicitly initialised
@@ -552,8 +608,11 @@ class Concrete : public Placeholder {
 public:
     Concrete() {}    // Compliant by exception — Placeholder has nothing to initialise
 };
+```
 
 ### Non-Compliant --- real-world device hierarchy:
+
+```cpp
 class BusInterface {
 public:
     BusInterface(int channel);
@@ -578,15 +637,19 @@ public:
                           // BusInterface's default ctor called — but
                           // it doesn't exist! Compile error or wrong channel.
 };
+```
+
 ### Compliant --- all bases explicit:
+
+```cpp
 class MultiProtocol : public Protocol1, public Protocol2 {
 public:
     MultiProtocol()
         : BusInterface(0), Protocol1(), Protocol2() {}   // Compliant
 };
+```
 
-
-Rule HSCAN.1.2 --- An accessible base class shall not be both virtual and non-virtual in the same hierarchy
+## Rule HSCAN.1.2 --- An accessible base class shall not be both virtual and non-virtual in the same hierarchy
 Description: When a base class is inherited both virtually and non-virtually in the same hierarchy, it is unclear whether the intent is for there to be one or more instances of the base class subobject. This leads to confusing object layouts and potential logic errors.
 
 ### Non-Compliant --- mixed virtual and non-virtual inheritance:
@@ -622,7 +685,7 @@ class Player : public DisplayPlugin, public SoundPlugin {};
 // Compliant — one Source subobject
 
 
-Rule HSCAN.3.1 --- User-declared member functions shall use the virtual, override and final specifiers appropriately
+## Rule HSCAN.3.1 --- User-declared member functions shall use the virtual, override and final specifiers appropriately
 Description: Using a single, correct specifier for each member function makes the intent unambiguous: - virtual --- a new virtual function expected to be overridden. - override --- an override that may itself be overridden. - final --- an override that cannot be overridden further.
 Redundant combinations (virtual + override, override + final, virtual + final) obscure the meaning and shall be avoided.
 
@@ -669,7 +732,7 @@ public:
 };
 
 
-Rule HSCAN.3.2 --- Parameters in an overriding virtual function shall not specify different default arguments
+## Rule HSCAN.3.2 --- Parameters in an overriding virtual function shall not specify different default arguments
 Description: Default arguments are resolved by the static type of the object. If an overriding function specifies a different default, the value used depends on whether the call is made through a base or derived reference, which is inconsistent and error-prone.
 
 ### Non-Compliant --- different default values:
@@ -712,7 +775,7 @@ public:
 };
 
 
-Rule HSCAN.3.4 --- A comparison of a potentially virtual pointer to member function shall only be with nullptr
+## Rule HSCAN.3.4 --- A comparison of a potentially virtual pointer to member function shall only be with nullptr
 Description: The result of comparing a pointer to a virtual member function with anything other than nullptr is unspecified by the C++ Standard. Only comparisons with nullptr yield well-defined results.
 
 ### Non-Compliant --- comparing virtual member function pointers:
@@ -754,7 +817,7 @@ void test(void (Incomplete::*p1)(), void (Incomplete::*p2)()) {
 }
 
 
-Rule HSCAP.1.1 --- An object's dynamic type shall not be used from within its constructor or destructor
+## Rule HSCAP.1.1 --- An object's dynamic type shall not be used from within its constructor or destructor
 Description: During construction and destruction, the dynamic type of an object differs from the type of the fully constructed object. Virtual calls, typeid on polymorphic types, and dynamic_cast produce results that may not match developer expectations. Calling a pure virtual function from a constructor or destructor results in undefined behaviour.
 
 ### Non-Compliant --- virtual call in constructor:
@@ -816,7 +879,7 @@ public:
 };
 
 
-Rule HSCAP.1.3 --- Conversion operators and constructors that are callable with a single argument shall be explicit
+## Rule HSCAP.1.3 --- Conversion operators and constructors that are callable with a single argument shall be explicit
 Description: Without explicit, single-argument constructors and conversion operators allow implicit type conversions, which can lead to unexpected function calls and hard-to-diagnose bugs. Copy and move constructors are excluded from this rule.
 
 ### Non-Compliant --- implicit single-argument constructor:
@@ -870,7 +933,7 @@ void test() {
 }
 
 
-Rule HSCAP.1.4 --- All direct, non-static data members of a class should be initialised before the class object is accessible
+## Rule HSCAP.1.4 --- All direct, non-static data members of a class should be initialised before the class object is accessible
 Description: A constructor should completely initialise its object. Uninitialised members can contain indeterminate values, leading to undefined behaviour when read. Members should be initialised via default member initialisers or constructor member initialisation lists, not by assignment in the constructor body.
 
 ### Non-Compliant --- member initialised in body instead of initialiser list:
@@ -934,7 +997,7 @@ public:
 };
 
 
-Rule HSCAR.8.1 --- Function templates shall not be explicitly specialised
+## Rule HSCAR.8.1 --- Function templates shall not be explicitly specialised
 Description: Explicit function specialisations are only considered after overload resolution has chosen a best match from the primary templates. Additionally, non-template overloads are preferred over template versions. This means specialisations may never be called even when the developer expects them to be. Function overloads provide a clearer and more predictable alternative.
 
 ### Non-Compliant --- explicit specialisation:
@@ -968,7 +1031,7 @@ void encode(const T& obj, std::ostream& os);
 void encode(const std::string& s, std::ostream& os);  // Overload — always preferred
 
 
-Rule HSCAS.1.1 --- An exception object shall not have pointer type
+## Rule HSCAS.1.1 --- An exception object shall not have pointer type
 Description: If a pointer is thrown as an exception and it refers to a dynamically allocated object, it is unclear which function is responsible for destroying it and when. Throwing by value avoids this ownership ambiguity entirely.
 
 ### Non-Compliant --- pointer thrown:
@@ -1024,7 +1087,7 @@ void verify(int num) {
 }
 
 
-Rule HSCAI.2.1 --- A virtual base class shall only be cast to a derived class by means of dynamic_cast
+## Rule HSCAI.2.1 --- A virtual base class shall only be cast to a derived class by means of dynamic_cast
 Description: The behaviour when casting from a virtual base class to a derived class is only well defined when dynamic_cast is used. Using static_cast or reinterpret_cast can result in undefined behaviour. Since C++17, a static_cast from a virtual base class is ill-formed, but some compilers may not yet issue a diagnostic.
 
 ### Non-Compliant --- reinterpret_cast from virtual base:
@@ -1039,11 +1102,11 @@ Leaf   * pLeaf2   =    dynamic_cast< Leaf * >( pRoot );        // Compliant — 
 Leaf   & refLeaf  =    dynamic_cast< Leaf & >( *pRoot );       // Compliant — may throw an exception
 
 
-Rule HSCAI.2.2 --- C-style casts and functional notation casts shall not be used
+## Rule HSCAI.2.2 --- C-style casts and functional notation casts shall not be used
 Description: C-style casts and functional notation casts raise several concerns: they permit almost any type to be converted to almost any other type without checks, they give no indication why the conversion is taking place, and their syntax is more difficult to recognize. The use of const_cast, dynamic_cast, static_cast and reinterpret_cast addresses these concerns.
 Exception: A C-style cast to void is permitted to explicitly discard a value (see 
 
-Rule HSCAA.1.2).
+## Rule HSCAA.1.2).
 
 ### Non-Compliant --- C-style cast:
 struct Item { Item( char c); };
@@ -1072,7 +1135,7 @@ void example2( int32_t num ) {
 }
 
 
-Rule HSCAI.2.3 --- A cast shall not remove any const or volatile qualification from the type accessed via a pointer or by reference
+## Rule HSCAI.2.3 --- A cast shall not remove any const or volatile qualification from the type accessed via a pointer or by reference
 Description: Using a cast to remove the qualification associated with the addressed type is a violation of the principle of type qualification. Removal of const qualification might circumvent the read-only status of an object, which may lead to undefined behaviour. Removal of volatile qualification might result in accesses to an object being removed during optimization.
 
 ### Non-Compliant --- casting away const/volatile:
@@ -1084,7 +1147,7 @@ pPlain = const_cast< uint16_t * >( pVolatile );           // Non-compliant
 pPlain = pConst;                                          // Rule does not apply — no cast
 
 
-Rule HSCAI.2.5 --- reinterpret_cast shall not be used
+## Rule HSCAI.2.5 --- reinterpret_cast shall not be used
 Description: Casting between unrelated types generally results in undefined behaviour.
 Exception: The following are allowed as the behaviour is well defined: 1. Using reinterpret_cast< T * > to cast any object pointer to a pointer to T, where T is one of void, char, unsigned char or std::byte, possibly cv-qualified. 2. Using reinterpret_cast< T >( p ) to convert a pointer p to an integer of type T that is large enough to represent a pointer value (e.g. std::uintptr_t).
 
@@ -1105,7 +1168,7 @@ void inspect( float num ) {
 }
 
 
-Rule HSCAI.2.6 --- An object with integral, enumerated, or pointer to void type shall not be cast to a pointer type
+## Rule HSCAI.2.6 --- An object with integral, enumerated, or pointer to void type shall not be cast to a pointer type
 Description: Casting from either an integral type or a pointer to void type to a pointer to an object may lead to unspecified behaviour. A round trip conversion of a pointer to object type through void * is well-defined but prohibited by this rule as it is error prone and detection of any error would be undecidable.
 Note: Casting from an integer to a pointer may be unavoidable when addressing memory mapped registers or other hardware specific features.
 
@@ -1123,7 +1186,7 @@ void convert( void * raw ) {
 }
 
 
-Rule HSCAI.18.1 --- An object or subobject must not be copied to an overlapping object
+## Rule HSCAI.18.1 --- An object or subobject must not be copied to an overlapping object
 Description: Copying between members of the same union object may result in undefined behaviour. If part of an array is to be copied to another part of the same array, std::memcpy may overwrite an element before it has been copied. By contrast, std::memmove is guaranteed to handle the overlap appropriately.
 
 ### Non-Compliant --- overlapping copy:
@@ -1148,7 +1211,7 @@ void example2( std::array< int16_t, 20 > & arr ) {
 }
 
 
-Rule HSCAJ.4.1 --- All if ... else if constructs shall be terminated with an else statement
+## Rule HSCAJ.4.1 --- All if ... else if constructs shall be terminated with an else statement
 Description: Requiring an else clause ensures that the developer has considered all possible cases. It also provides a place to handle unexpected conditions or to document that no action is required.
 
 ### Non-Compliant --- missing else:
@@ -1179,7 +1242,7 @@ void toggle( bool enabled ) {
 }
 
 
-Rule HSCAP.0.2 (Dir) --- User-provided copy and move assignment operators shall handle self-assignment
+## Rule HSCAP.0.2 (Dir) --- User-provided copy and move assignment operators shall handle self-assignment
 Description: Naïve implementations of copy and move assignment can exhibit undefined behaviour, resource leaks, or loss of data when an object is assigned to itself. Self-assignment is rarely intentional but can occur through aliased references or overlapping ranges. Well-known idioms, such as copy-and-swap, may help when complying with this directive.
 
 ### Non-Compliant --- self-assignment causes undefined behaviour:
@@ -1215,7 +1278,7 @@ Array& Array::operator=(const Array& other) & {
 }
 
 
-Rule HSCAS.4.1 --- Exception-unfriendly functions shall be noexcept
+## Rule HSCAS.4.1 --- Exception-unfriendly functions shall be noexcept
 Description: The following functions must be implicitly or explicitly noexcept: 1. Any function directly called to initialize a non-constexpr, non-local variable with static or thread storage duration; 2. All destructors; 3. All copy-constructors of an exception object; 4. All move constructors; 5. All move assignment operators; 6. All functions named "swap".
 When an exception is thrown, destructors for automatic objects are invoked. If one of these destructors exits with an exception, the program will terminate. Move constructors and move assignment operators are usually expected to be non-throwing; if they are not declared noexcept, strong exception safety is more difficult to achieve.
 
@@ -1250,7 +1313,7 @@ public:
 };
 
 
-Rule HSCAV.6.2 --- Dynamic memory shall be managed automatically
+## Rule HSCAV.6.2 --- Dynamic memory shall be managed automatically
 Description: The use of dynamic memory requires tracking of any memory resources that are allocated to ensure that they are released appropriately (no memory leaks, no double frees, use of a matching deallocation function). This is likely to be error prone if it is not managed automatically using facilities such as std::make_unique or std::vector.
 A program shall NOT use: 1. Any non-placement form of new or delete; 2. malloc, calloc, realloc, aligned_alloc, free; 3. Any member function named allocate or deallocate enclosed by namespace std; 4. std::unique_ptr::release.
 
@@ -1271,7 +1334,7 @@ auto managed2 = std::make_shared< Resource >();                        // Compli
 std::vector< Resource > collection;                                     // Compliant
 
 
-Rule HSCAV.6.3 --- Advanced memory management shall not be used
+## Rule HSCAV.6.3 --- Advanced memory management shall not be used
 Description: There are a number of complex issues, such as alignment, object lifetimes and the need to use std::launder, that must be considered when using advanced memory management. Failure to deal with these appropriately results in the introduction of undefined behaviour that is hard to identify.
 Advanced memory management occurs when: 1. An advanced memory management function is called (placement new, user-declared operator new/delete); 2. A destructor is called explicitly; 3. Any operator new or operator delete is user-declared.
 
