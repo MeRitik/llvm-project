@@ -4,16 +4,34 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyHSCModule STATIC
+  AdvancedMemoryManagementCheck.cpp
   ConcealedBaseFunctionCheck.cpp
+  DefaultArgumentOverrideCheck.cpp
   DependentBaseLookupCheck.cpp
+  DynamicMemoryManagementCheck.cpp
+  DynamicTypeInConstructorCheck.cpp
   EscapingLocalAddressCheck.cpp
+  ExceptionPointerCheck.cpp
+  ExceptionUnfriendlyFunctionCheck.cpp
   ExplicitBaseInitCheck.cpp
+  ExplicitSingleArgumentConstructorCheck.cpp
+  IfElseIfTerminationCheck.cpp
   HSCTidyModule.cpp
+  MemberInitializationCheck.cpp
+  MixedVirtualInheritanceCheck.cpp
+  MovedFromStateCheck.cpp
+  OverlappingCopyCheck.cpp
   RefQualifiedThisReturnCheck.cpp
-  UnusedReturnValueCheck.cpp
-  UnusedVariableCheck.cpp
-  UnusedTypeCheck.cpp
+  RemoveConstCheck.cpp
+  ReinterpretCastCheck.cpp
+  SelfAssignmentCheck.cpp
   UnusedFunctionCheck.cpp
+  UnusedParameterCheck.cpp
+  UnusedReturnValueCheck.cpp
+  UnusedTypeCheck.cpp
+  UnusedVariableCheck.cpp
+  VirtualMemberPointerCmpCheck.cpp
+  VirtualOverrideCheck.cpp
 
   LINK_LIBS
   clangTidy

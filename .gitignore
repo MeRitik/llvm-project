@@ -87,3 +87,15 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+
+#==============================================================================#
+# HSC Clang-Tidy Test Utilities and Generated Files
+#==============================================================================#
+# Generated organized test files
+/organized-tests/
+# Test file organization utilities
+organize.ps1
+organize_tests.ps1
+organize_test_files.cpp
+organize_test_files.PS1
+organize_test_files.exe
