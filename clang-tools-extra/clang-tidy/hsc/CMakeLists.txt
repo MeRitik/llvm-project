@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyHSCModule STATIC
   AdvancedMemoryManagementCheck.cpp
+  CStyleFunctionalCastCheck.cpp
   ConcealedBaseFunctionCheck.cpp
   DefaultArgumentOverrideCheck.cpp
   DependentBaseLookupCheck.cpp
@@ -30,7 +31,9 @@ add_clang_library(clangTidyHSCModule STATIC
   UnusedReturnValueCheck.cpp
   UnusedTypeCheck.cpp
   UnusedVariableCheck.cpp
+  VoidIntegerToPointerCastCheck.cpp
   VirtualMemberPointerCmpCheck.cpp
+  VirtualBaseToDerivedCastCheck.cpp
   VirtualOverrideCheck.cpp
 
   LINK_LIBS

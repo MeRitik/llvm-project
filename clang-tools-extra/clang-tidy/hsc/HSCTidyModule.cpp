@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "AdvancedMemoryManagementCheck.h"
+#include "CStyleFunctionalCastCheck.h"
 #include "ConcealedBaseFunctionCheck.h"
 #include "DefaultArgumentOverrideCheck.h"
 #include "DependentBaseLookupCheck.h"
@@ -33,8 +34,10 @@
 #include "UnusedReturnValueCheck.h"
 #include "UnusedTypeCheck.h"
 #include "UnusedVariableCheck.h"
+#include "VirtualBaseToDerivedCastCheck.h"
 #include "VirtualMemberPointerCmpCheck.h"
 #include "VirtualOverrideCheck.h"
+#include "VoidIntegerToPointerCastCheck.h"
 
 namespace clang::tidy {
 namespace hsc {
@@ -45,6 +48,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AdvancedMemoryManagementCheck>(
         "hsc-advanced-memory-management");
+    CheckFactories.registerCheck<CStyleFunctionalCastCheck>(
+        "hsc-c-style-functional-cast");
     CheckFactories.registerCheck<ConcealedBaseFunctionCheck>(
         "hsc-concealed-base-function");
     CheckFactories.registerCheck<DefaultArgumentOverrideCheck>(
@@ -86,6 +91,10 @@ public:
     CheckFactories.registerCheck<UnusedVariableCheck>("hsc-unused-variable");
     CheckFactories.registerCheck<VirtualMemberPointerCmpCheck>(
         "hsc-virtual-member-pointer-cmp");
+    CheckFactories.registerCheck<VirtualBaseToDerivedCastCheck>(
+        "hsc-virtual-base-to-derived-cast");
+    CheckFactories.registerCheck<VoidIntegerToPointerCastCheck>(
+        "hsc-void-integer-to-pointer-cast");
     CheckFactories.registerCheck<VirtualOverrideCheck>("hsc-virtual-override");
   }
 };

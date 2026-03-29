@@ -55,14 +55,18 @@ static bool hasBaseMethodNamed(const CXXRecordDecl *RD, DeclarationName Name,
 } // namespace
 
 void ConcealedBaseFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(cxxMethodDecl(isDefinition(), unless(isImplicit()))
-                         .bind("derived-method"),
+  Finder->addMatcher(cxxMethodDecl(unless(isImplicit())).bind("derived-method"),
                      this);
 }
 
 void ConcealedBaseFunctionCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MD = Result.Nodes.getNodeAs<CXXMethodDecl>("derived-method");
   if (!MD || !MD->getIdentifier())
+    return;
+
+  // Diagnose once per method at the first declaration so declaration-only
+  // cases are covered without duplicate diagnostics.
+  if (!MD->isFirstDecl())
     return;
 
   if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD) ||

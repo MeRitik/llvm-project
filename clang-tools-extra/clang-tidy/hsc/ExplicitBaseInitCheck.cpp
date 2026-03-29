@@ -30,6 +30,8 @@ static bool isExplicitlyInitialized(const CXXConstructorDecl *Ctor,
   for (const CXXCtorInitializer *Init : Ctor->inits()) {
     if (!Init->isBaseInitializer())
       continue;
+    if (!Init->isWritten())
+      continue;
     const Type *InitCanon = canonicalType(Init->getTypeSourceInfo(), Context);
     if (InitCanon == BaseCanon)
       return true;

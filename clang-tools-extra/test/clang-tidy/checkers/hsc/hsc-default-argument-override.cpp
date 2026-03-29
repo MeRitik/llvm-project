@@ -1,17 +1,38 @@
 // RUN: %check_clang_tidy %s hsc-default-argument-override %t
 
-class Base {
+#include <cstdint>
+
+class Parent {
 public:
-  virtual void method(int x = 5);
+  virtual void correct(int32_t Val = 0);
+  virtual void wrong1(int32_t Val = 0);
+  virtual void wrong2(int32_t Val);
 };
 
-class Derived : public Base {
+class Child : public Parent {
 public:
-  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: default argument in override differs
-  void method(int x = 10) override;
+  void correct(int32_t Val = 0) override;
+  void wrong1(int32_t Val = 1) override;
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: overriding virtual function parameter shall not specify a different default argument [hsc-default-argument-override]
+  void wrong2(int32_t Val = 2) override;
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: overriding virtual function parameter shall not specify a different default argument [hsc-default-argument-override]
 };
 
-class GoodDerived : public Base {
+class ChildOk : public Parent {
 public:
-  void method(int x = 5) override;
+  void correct(int32_t Val = 0) override;
+  void wrong1(int32_t Val) override;
+};
+
+class Payload {};
+
+class Link {
+public:
+  virtual bool transmit(const Payload &P, int TimeoutMs = 1000);
+};
+
+class SecureLink : public Link {
+public:
+  bool transmit(const Payload &P, int TimeoutMs = 5000) override;
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: overriding virtual function parameter shall not specify a different default argument [hsc-default-argument-override]
 };

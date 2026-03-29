@@ -51,17 +51,32 @@ AST_MATCHER(TypeAliasDecl, isAliasInLimitedScope) {
   return false;
 }
 
-AST_MATCHER(CXXRecordDecl, isUnusedRecord) {
-  return !Node.isReferenced() && !Node.isLambda();
-}
-
 AST_MATCHER(TypeAliasDecl, isUnusedAlias) { return !Node.isReferenced(); }
+
+static bool hasExternalTypeUse(const CXXRecordDecl *RD, ASTContext &Context) {
+  if (!RD)
+    return false;
+
+  RD = RD->getDefinition();
+  if (!RD)
+    return false;
+
+  const auto ExternalUseMatcher =
+      typeLoc(loc(qualType(hasDeclaration(cxxRecordDecl(equalsNode(RD))))),
+              unless(hasAncestor(cxxRecordDecl(equalsNode(RD)))),
+              unless(hasAncestor(
+                  cxxMethodDecl(ofClass(cxxRecordDecl(equalsNode(RD)))))))
+          .bind("external-use");
+
+  return !match(ExternalUseMatcher, Context).empty();
+}
 
 } // namespace
 
 void UnusedTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Match unused class/struct declarations in limited scope
-  Finder->addMatcher(cxxRecordDecl(isRecordInLimitedScope(), isUnusedRecord(),
+  Finder->addMatcher(cxxRecordDecl(isDefinition(), isRecordInLimitedScope(),
+                                   unless(isLambda()),
                                    unless(hasAttr(attr::Unused)))
                          .bind("unused-type"),
                      this);
@@ -75,6 +90,11 @@ void UnusedTypeCheck::registerMatchers(MatchFinder *Finder) {
 
 void UnusedTypeCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *RD = Result.Nodes.getNodeAs<CXXRecordDecl>("unused-type")) {
+    if (!Result.Context)
+      return;
+    if (hasExternalTypeUse(RD, *Result.Context))
+      return;
+
     diag(RD->getLocation(), "type %0 is never used") << RD;
     return;
   }

@@ -2,52 +2,98 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Lex/Lexer.h"
+
+#include <cctype>
+#include <string>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::hsc {
 
+namespace {
+
+std::string normalizeWhitespace(StringRef Text) {
+  std::string Normalized;
+  Normalized.reserve(Text.size());
+  for (char C : Text)
+    if (!std::isspace(static_cast<unsigned char>(C)))
+      Normalized.push_back(C);
+  return Normalized;
+}
+
+std::string getNormalizedDefaultArgText(const Expr *DefaultArg,
+                                        const SourceManager &SM,
+                                        const LangOptions &LangOpts) {
+  if (!DefaultArg)
+    return {};
+
+  const CharSourceRange Range =
+      CharSourceRange::getTokenRange(DefaultArg->getSourceRange());
+  const StringRef Text = Lexer::getSourceText(Range, SM, LangOpts);
+  if (Text.empty())
+    return {};
+
+  return normalizeWhitespace(Text);
+}
+
+bool hasDifferentDefaultArgument(const ParmVarDecl *OverrideParam,
+                                 unsigned ParamIndex,
+                                 const CXXMethodDecl *Override,
+                                 const SourceManager &SM,
+                                 const LangOptions &LangOpts) {
+  const Expr *OverrideDefaultArg = OverrideParam->getDefaultArg();
+  if (!OverrideDefaultArg)
+    return false;
+
+  const std::string OverrideText =
+      getNormalizedDefaultArgText(OverrideDefaultArg, SM, LangOpts);
+
+  for (const auto *BaseMethod : Override->overridden_methods()) {
+    if (ParamIndex >= BaseMethod->param_size())
+      continue;
+
+    const ParmVarDecl *BaseParam = BaseMethod->getParamDecl(ParamIndex);
+    if (!BaseParam->hasDefaultArg())
+      return true;
+
+    const std::string BaseText =
+        getNormalizedDefaultArgText(BaseParam->getDefaultArg(), SM, LangOpts);
+    if (BaseText != OverrideText)
+      return true;
+  }
+
+  return false;
+}
+
+} // namespace
+
 void DefaultArgumentOverrideCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(cxxMethodDecl(isVirtual(), hasAnyParameter(parmVarDecl(
-                                                    hasDefaultArgument())))
-                         .bind("override"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(unless(isImplicit()),
+                    hasAnyParameter(parmVarDecl(hasDefaultArgument())))
+          .bind("override"),
+      this);
 }
 
 void DefaultArgumentOverrideCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Override = Result.Nodes.getNodeAs<CXXMethodDecl>("override");
-  if (!Override)
+  if (!Override || !Override->isFirstDecl() ||
+      Override->size_overridden_methods() == 0 || !Result.SourceManager)
     return;
 
-  const auto *RD = dyn_cast<CXXRecordDecl>(Override->getDeclContext());
-  if (!RD || RD->getNumBases() == 0)
-    return;
-
-  for (const auto &Base : RD->bases()) {
-    const auto *BaseClass = Base.getType()->getAsCXXRecordDecl();
-    if (!BaseClass)
+  for (unsigned I = 0; I < Override->param_size(); ++I) {
+    const ParmVarDecl *OverrideParam = Override->getParamDecl(I);
+    if (!OverrideParam->hasDefaultArg())
       continue;
 
-    for (const auto *BaseMethod : BaseClass->methods()) {
-      if (BaseMethod->getName() != Override->getName())
-        continue;
-
-      unsigned MinParams =
-          std::min(BaseMethod->param_size(), Override->param_size());
-      for (unsigned i = 0; i < MinParams; ++i) {
-        const auto *BaseParam = BaseMethod->getParamDecl(i);
-        const auto *OverrideParam = Override->getParamDecl(i);
-
-        bool BaseHasDefault = BaseParam->hasDefaultArg();
-        bool OverrideHasDefault = OverrideParam->hasDefaultArg();
-
-        if (BaseHasDefault != OverrideHasDefault) {
-          diag(OverrideParam->getLocation(),
-               "default argument in override differs from base class "
-               "definition");
-        }
-      }
+    if (hasDifferentDefaultArgument(OverrideParam, I, Override,
+                                    *Result.SourceManager, getLangOpts())) {
+      diag(OverrideParam->getLocation(),
+           "overriding virtual function parameter shall not specify a "
+           "different default argument");
+      break;
     }
   }
 }

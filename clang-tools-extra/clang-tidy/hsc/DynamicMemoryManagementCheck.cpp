@@ -1,37 +1,66 @@
 #include "DynamicMemoryManagementCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
+using namespace clang;
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::hsc {
 
 void DynamicMemoryManagementCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(cxxNewExpr().bind("new"), this);
-  Finder->addMatcher(cxxDeleteExpr().bind("del"), this);
-  Finder->addMatcher(callExpr(callee(functionDecl(hasAnyName(
-                                  "malloc", "free", "calloc", "realloc"))))
-                         .bind("malloc"),
+
+  Finder->addMatcher(cxxDeleteExpr().bind("delete"), this);
+
+  Finder->addMatcher(
+      callExpr(callee(functionDecl(hasAnyName("malloc", "calloc", "realloc",
+                                              "free", "aligned_alloc"))))
+          .bind("c_alloc"),
+      this);
+
+  Finder->addMatcher(
+      cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))))
+          .bind("release"),
+      this);
+
+  Finder->addMatcher(cxxMemberCallExpr(callee(cxxMethodDecl(
+                                           hasAnyName("allocate", "deallocate"),
+                                           ofClass(hasName("std::allocator")))))
+                         .bind("allocator"),
                      this);
 }
 
 void DynamicMemoryManagementCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (const auto *New = Result.Nodes.getNodeAs<CXXNewExpr>("new")) {
-    diag(New->getExprLoc(),
-         "use std::make_unique or std::make_shared instead of raw new");
+  if (const auto *E = Result.Nodes.getNodeAs<CXXNewExpr>("new")) {
+    diag(E->getBeginLoc(), "avoid raw 'new'; use automatic memory management "
+                           "(e.g., std::make_unique)");
     return;
   }
 
-  if (const auto *Del = Result.Nodes.getNodeAs<CXXDeleteExpr>("del")) {
-    diag(Del->getExprLoc(), "use smart pointers instead of raw delete");
+  if (const auto *E = Result.Nodes.getNodeAs<CXXDeleteExpr>("delete")) {
+    diag(E->getBeginLoc(),
+         "avoid raw 'delete'; use automatic memory management");
     return;
   }
 
-  if (const auto *Malloc = Result.Nodes.getNodeAs<CallExpr>("malloc")) {
-    diag(Malloc->getExprLoc(),
-         "use std::unique_ptr or std::shared_ptr instead of malloc/free");
+  if (const auto *E = Result.Nodes.getNodeAs<CallExpr>("c_alloc")) {
+    diag(E->getBeginLoc(), "avoid C-style memory allocation; use RAII (e.g., "
+                           "std::vector, std::make_unique)");
+    return;
+  }
+
+  if (const auto *E = Result.Nodes.getNodeAs<CXXMemberCallExpr>("release")) {
+    diag(E->getBeginLoc(), "avoid std::unique_ptr::release(); it breaks "
+                           "automatic memory management");
+    return;
+  }
+
+  if (const auto *E = Result.Nodes.getNodeAs<CXXMemberCallExpr>("allocator")) {
+    diag(E->getBeginLoc(), "avoid std::allocator::allocate/deallocate; prefer "
+                           "automatic containers");
     return;
   }
 }

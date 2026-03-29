@@ -8,43 +8,38 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::hsc {
 
 void VirtualOverrideCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      cxxMethodDecl(isVirtual(), hasParent(cxxRecordDecl())).bind("method"),
-      this);
+  Finder->addMatcher(cxxMethodDecl(unless(isImplicit())).bind("method"), this);
 }
 
 void VirtualOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
-  if (!Method)
+  if (!Method || !Method->isFirstDecl())
     return;
 
-  const auto *RD = dyn_cast<CXXRecordDecl>(Method->getDeclContext());
-  if (!RD || RD->getNumBases() == 0)
-    return;
+  const bool HasVirtual = Method->isVirtualAsWritten();
+  const bool HasOverride = Method->hasAttr<clang::OverrideAttr>();
+  const bool HasFinal = Method->hasAttr<clang::FinalAttr>();
+  const bool OverridesBase = Method->size_overridden_methods() > 0;
 
-  bool OverridesBase = false;
-  for (const auto &Base : RD->bases()) {
-    const auto *BaseClass = Base.getType()->getAsCXXRecordDecl();
-    if (!BaseClass)
-      continue;
-
-    for (const auto *BaseMethod : BaseClass->methods()) {
-      if (BaseMethod->getName() == Method->getName()) {
-        OverridesBase = true;
-        break;
-      }
-    }
-    if (OverridesBase)
-      break;
+  if (HasVirtual && HasOverride) {
+    diag(Method->getLocation(),
+         "use only one specifier: avoid combining 'virtual' and 'override'");
   }
 
-  if (OverridesBase) {
-    if (!Method->hasAttr<clang::OverrideAttr>() &&
-        !Method->hasAttr<clang::FinalAttr>()) {
-      diag(Method->getLocation(),
-           "virtual member function should use 'override' or 'final' "
-           "specifier");
-    }
+  if (HasOverride && HasFinal) {
+    diag(Method->getLocation(),
+         "use only one specifier: avoid combining 'override' and 'final'");
+  }
+
+  if (HasVirtual && HasFinal) {
+    diag(Method->getLocation(),
+         "use only one specifier: avoid combining 'virtual' and 'final'");
+  }
+
+  if (OverridesBase && !HasOverride && !HasFinal) {
+    diag(Method->getLocation(),
+         "overriding virtual member function should use 'override' or "
+         "'final'");
   }
 }
 

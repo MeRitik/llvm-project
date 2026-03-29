@@ -39,6 +39,12 @@ static bool isThisOrSubobjectExpr(const Expr *E) {
   }
 
   if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Deref) {
+      const Expr *Sub = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (isa<CXXThisExpr>(Sub))
+        return true;
+    }
+
     if (UO->getOpcode() == UO_AddrOf) {
       const Expr *Sub = UO->getSubExpr()->IgnoreParenImpCasts();
       if (const auto *ME = dyn_cast<MemberExpr>(Sub)) {
